@@ -11,7 +11,7 @@ given the current state of the stream. This is the most basic case. We can imagi
    / \
    B C
   / \
- D  E
+ D   E
  ```
 would need to support queries like this, for example:
 ```
