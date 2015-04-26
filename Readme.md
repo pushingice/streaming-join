@@ -7,9 +7,9 @@ JOIN B ON A.id == B.id;
 ```
 given the current state of the stream. This is the most basic case. We can imagine more complex joins involving arbitrary relationships, such as trees and graphs. For instance, a tree of relationships like this: 
  ```
-    A
-   / \
-   B C
+     A
+    / \
+   B   C
   / \
  D   E
  ```
