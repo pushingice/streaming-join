@@ -1,5 +1,6 @@
 package com.github.pushingice;
 
+import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,8 @@ public class Driver {
         } catch (IOException e) {
             LOG.error("Problem reading {}", args[0]);
         }
-        EdgeList graph = new EdgeList("src/main/resources/" + prop.getProperty("scenarioFile"));
+        Graph g = CSVToGraph.parse("src/main/resources/" +
+                prop.getProperty("scenarioFile"));
 
     }
 }
