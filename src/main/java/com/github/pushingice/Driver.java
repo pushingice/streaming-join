@@ -32,7 +32,7 @@ public class Driver {
             LOG.error("Problem reading {}", args[0]);
         }
         Graph g = CSVToGraph.parse("src/main/resources/" +
-                prop.getProperty("scenarioFile"));
+                prop.getProperty(Constants.CONFIG_SCENARIO_FILE));
 
     }
 }
