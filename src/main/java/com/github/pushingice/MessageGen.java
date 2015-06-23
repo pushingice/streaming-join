@@ -3,8 +3,6 @@ package com.github.pushingice;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 
 import java.util.*;
-import java.util.stream.StreamSupport;
-import java.util.stream.Stream;
 
 public class MessageGen {
 
