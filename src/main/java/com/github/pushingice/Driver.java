@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Random;
 
 public class Driver {
 
@@ -20,19 +21,25 @@ public class Driver {
             System.out.println("Please specify properties file.");
             System.exit(0);
         }
-        Properties prop = new Properties();
+        Properties config = new Properties();
         try (InputStream input = new FileInputStream(args[0])) {
-            prop.load(input);
+            config.load(input);
             LOG.info("{}:", args[0]);
-            prop.entrySet().forEach((x) ->
+            config.entrySet().forEach((x) ->
                     LOG.info("{}={}", x.getKey(), x.getValue()));
         } catch (FileNotFoundException e) {
             LOG.error("Couldn't find {}", args[0]);
         } catch (IOException e) {
             LOG.error("Problem reading {}", args[0]);
         }
-        Graph g = CSVToGraph.parse("src/main/resources/" +
-                prop.getProperty(Constants.CONFIG_SCENARIO_FILE));
+        Graph graph = CSVToGraph.parse("src/main/resources/" +
+                config.getProperty(Constants.CONFIG_SCENARIO_FILE));
+        Random random = new Random(Long.parseLong(
+                config.getProperty(Constants.CONFIG_RANDOM_SEED)));
+        MessageGen messageGen = new MessageGen(graph, random, config);
+        for (Message m: messageGen.getIterable()) {
+            LOG.info(m.getId().toString());
+        }
 
     }
 }
