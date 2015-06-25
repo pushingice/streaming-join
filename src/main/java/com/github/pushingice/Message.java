@@ -19,6 +19,20 @@ public class Message {
         random.nextBytes(content);
     }
 
+    public Message(String messageType, long id, String fkMessageType,
+                   long fkId, byte[] content) {
+        this.messageType = messageType;
+        this.id = id;
+        this.content = content;
+        this.fkMessageType = fkMessageType;
+        this.fkId = fkId;
+    }
+
+
+    public Message copy() {
+        return new Message(messageType, id, fkMessageType, fkId, content);
+    }
+
     public Long getId() {
         return id;
     }
@@ -55,6 +69,7 @@ public class Message {
                 ", id=" + id +
                 ", fkMessageType='" + fkMessageType + '\'' +
                 ", fkId=" + fkId +
+                ", contentHash=" + content.hashCode() +
                 '}';
     }
 }

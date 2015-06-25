@@ -38,6 +38,7 @@ public class MessageGen {
         public Collection<Message> next() {
 
             Map<String, Message> msgMap = new HashMap<>();
+            List<Message> msgs = new LinkedList<>();
             graph.edges().forEachRemaining(e -> {
                 String fromType = e.outVertex().label();
                 String toType = e.inVertex().label();
@@ -45,9 +46,11 @@ public class MessageGen {
                 Message toMsg = getOrCreate(msgMap, toType);
                 fromMsg.setFkId(toMsg.getId());
                 fromMsg.setFkMessageType(toMsg.getMessageType());
+                msgs.add(fromMsg.copy());
+                msgs.add(toMsg.copy());
             });
             count += msgMap.size();
-            return msgMap.values();
+            return msgs;
         }
 
     }
