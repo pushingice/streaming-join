@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import org.apache.commons.csv.CSVRecord;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
@@ -23,12 +25,15 @@ public class CSVToGraph {
     private static void addEdge(CSVRecord rec, Graph g) {
         Vertex v0 = g.addVertex(rec.get(0));
         Vertex v1 = g.addVertex(rec.get(1));
-        v0.addEdge(Kind.FOREIGN_KEY.toString(), v1);
+        v0.addEdge(Kind.FOREIGN_KEY.toString(), v1, "weight", rec.get(2));
+
+
     }
 
     public static void LogAllEdges(Graph g) {
-        g.traversal().E().forEachRemaining(x -> LOG.info("{} -[{}]-> {}",
-                x.outVertex().label(), x.label(), x.inVertex().label()));
+        g.traversal().E().forEachRemaining(x -> LOG.info("{} -[{}]-> {} : {}",
+                x.outVertex().label(), x.label(), x.inVertex().label(),
+                x.property("weight")));
     }
 
     public static Graph parse(String filename) {
