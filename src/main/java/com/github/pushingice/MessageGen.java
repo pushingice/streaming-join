@@ -1,8 +1,11 @@
 package com.github.pushingice;
 
 import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
+
 
 public class MessageGen {
 
@@ -10,30 +13,49 @@ public class MessageGen {
     private Graph graph;
     private Random random;
     private Properties config;
-    private class MessageIterator implements Iterator<Message> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(
+            Driver.class.getCanonicalName());
+
+
+    private class MessageIterator implements Iterator<Collection<Message>> {
 
         private int count = 0;
 
         @Override
         public boolean hasNext() {
-            if (count < messageCount) {
-                return true;
-            } else {
-                return false;
+            return count < messageCount;
+        }
+
+        private Message getOrCreate(Map<String, Message> map, String key) {
+            if (!map.containsKey(key)) {
+                map.put(key, new Message(config, random, key));
             }
+            return map.get(key);
         }
 
         @Override
-        public Message next() {
-            count++;
-            return new Message(config, random);
+        public Collection<Message> next() {
+
+            Map<String, Message> msgMap = new HashMap<>();
+            graph.edges().forEachRemaining(e -> {
+                String fromType = e.outVertex().label();
+                String toType = e.inVertex().label();
+                Message fromMsg = getOrCreate(msgMap, fromType);
+                Message toMsg = getOrCreate(msgMap, toType);
+                fromMsg.setFkId(toMsg.getId());
+                fromMsg.setFkMessageType(toMsg.getMessageType());
+            });
+            count += msgMap.size();
+            return msgMap.values();
         }
+
     }
-    private class MessageIterable implements Iterable<Message> {
+
+    private class MessageIterable implements Iterable<Collection<Message>> {
 
         @Override
-        public Iterator<Message> iterator() {
-
+        public Iterator<Collection<Message>> iterator() {
             return new MessageIterator();
         }
     }
@@ -46,7 +68,7 @@ public class MessageGen {
         this.config = config;
     }
 
-    public Iterable<Message> getIterable() {
+    public Iterable<Collection<Message>> getIterable() {
         return new MessageIterable();
     }
 

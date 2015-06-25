@@ -8,8 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Properties;
-import java.util.Random;
+import java.util.*;
 
 public class Driver {
 
@@ -17,11 +16,14 @@ public class Driver {
             Driver.class.getCanonicalName());
 
     public static void main(String[] args) {
+
         if (args.length < 1) {
             System.out.println("Please specify properties file.");
             System.exit(0);
         }
+
         Properties config = new Properties();
+
         try (InputStream input = new FileInputStream(args[0])) {
             config.load(input);
             LOG.info("{}:", args[0]);
@@ -32,13 +34,17 @@ public class Driver {
         } catch (IOException e) {
             LOG.error("Problem reading {}", args[0]);
         }
+
         Graph graph = CSVToGraph.parse("src/main/resources/" +
                 config.getProperty(Constants.CONFIG_SCENARIO_FILE));
         Random random = new Random(Long.parseLong(
                 config.getProperty(Constants.CONFIG_RANDOM_SEED)));
         MessageGen messageGen = new MessageGen(graph, random, config);
-        for (Message m: messageGen.getIterable()) {
-            LOG.info(m.getId().toString());
+
+        for (Collection<Message> coll: messageGen.getIterable()) {
+            for (Message m : coll) {
+                LOG.info(m.toString());
+            }
         }
 
     }
