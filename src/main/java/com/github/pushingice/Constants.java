@@ -2,10 +2,9 @@ package com.github.pushingice;
 
 public final class Constants {
 
-    public static enum Kind {
-        FOREIGN_KEY
-    };
-
+    public static final String FROM_WEIGHT = "fromWeight";
+    public static final String TO_WEIGHT = "toWeight";
+    public static final String FOREIGN_KEY = "foreignKey";
     public static final String CONFIG_SCENARIO_FILE = "scenarioFile";
     public static final String CONFIG_MESSAGE_BYTES = "messageBytes";
     public static final String CONFIG_RANDOM_SEED = "randomSeed";

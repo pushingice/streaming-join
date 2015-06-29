@@ -1,6 +1,6 @@
 package com.github.pushingice;
 
-import com.github.pushingice.Constants.Kind;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 
@@ -9,8 +9,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import org.apache.commons.csv.CSVRecord;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
@@ -25,15 +23,18 @@ public class CSVToGraph {
     private static void addEdge(CSVRecord rec, Graph g) {
         Vertex v0 = g.addVertex(rec.get(0));
         Vertex v1 = g.addVertex(rec.get(1));
-        v0.addEdge(Kind.FOREIGN_KEY.toString(), v1, "weight", rec.get(2));
+        v0.addEdge(Constants.FOREIGN_KEY, v1,
+                Constants.FROM_WEIGHT, rec.get(2),
+                Constants.TO_WEIGHT, rec.get(3));
 
 
     }
 
     public static void LogAllEdges(Graph g) {
-        g.traversal().E().forEachRemaining(x -> LOG.info("{} -[{}]-> {} : {}",
+        g.traversal().E().forEachRemaining(x -> LOG.info("{} -[{}]-> {} | {}:{}",
                 x.outVertex().label(), x.label(), x.inVertex().label(),
-                x.property("weight")));
+                x.property(Constants.FROM_WEIGHT),
+                x.property(Constants.TO_WEIGHT)));
     }
 
     public static Graph parse(String filename) {

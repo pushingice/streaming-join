@@ -1,16 +1,18 @@
 package com.github.pushingice;
 
 import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 
 public class MessageGen {
 
     private int messageCount;
-    private Graph graph;
+    private Graph modelGraph;
     private Random random;
     private Properties config;
 
@@ -37,19 +39,52 @@ public class MessageGen {
         @Override
         public Collection<Message> next() {
 
-            Map<String, Message> msgMap = new HashMap<>();
-            List<Message> msgs = new LinkedList<>();
-            graph.edges().forEachRemaining(e -> {
+            List<Message> msgs = new ArrayList<>();
+            Graph messageGraph = TinkerGraph.open();
+            modelGraph.edges().forEachRemaining(e -> {
                 String fromType = e.outVertex().label();
                 String toType = e.inVertex().label();
-                Message fromMsg = getOrCreate(msgMap, fromType);
-                Message toMsg = getOrCreate(msgMap, toType);
-                fromMsg.setFkId(toMsg.getId());
-                fromMsg.setFkMessageType(toMsg.getMessageType());
-                msgs.add(fromMsg.copy());
-                msgs.add(toMsg.copy());
+                int fromWeight = Integer.parseInt(
+                        e.property(Constants.FROM_WEIGHT).value().toString());
+                int toWeight = Integer.parseInt(
+                        e.property(Constants.TO_WEIGHT).value().toString());
+                boolean hasFrom = messageGraph.traversal().V()
+                        .has(fromType).hasNext();
+                boolean hasTo = messageGraph.traversal().V()
+                        .has(toType).hasNext();
+                if (!hasFrom) {
+                    LOG.info("no nodes for from type {}, adding", fromType);
+                    IntStream.range(0, fromWeight).forEach(x ->
+                            messageGraph.addVertex(fromType,
+                                    new Message(config, random, fromType)));
+                    messageGraph.traversal().V().has(fromType).forEachRemaining(
+                            v -> LOG.info(v.property(fromType).value().toString())
+                    );
+                }
+
+                if (!hasTo) {
+                    LOG.info("no nodes for to type {}, adding", toType);
+                    IntStream.range(0, toWeight).forEach(x ->
+                            messageGraph.addVertex(toType,
+                                    new Message(config, random, toType)));
+                    messageGraph.traversal().V().has(toType).forEachRemaining(
+                            v -> LOG.info(v.property(toType).value().toString())
+                    );
+                }
+
+                messageGraph.traversal().V().has(toType).forEachRemaining(t ->
+                    messageGraph.traversal().V().has(fromType).forEachRemaining(f -> {
+                        Message from = ((Message) f.property(fromType).value()).copy();
+                        Message to = ((Message) t.property(toType).value()).copy();
+                        from.setFkId(to.getId());
+                        from.setFkMessageType(to.getMessageType());
+                        msgs.add(from);
+                        msgs.add(to);
+                    })
+                );
             });
-            count += msgMap.size();
+
+            count += msgs.size();
             return msgs;
         }
 
@@ -63,10 +98,10 @@ public class MessageGen {
         }
     }
 
-    public MessageGen(Graph graph, Random random, Properties config) {
+    public MessageGen(Graph modelGraph, Random random, Properties config) {
         this.messageCount = Integer.parseInt(
                 config.getProperty(Constants.CONFIG_MESSAGE_COUNT));
-        this.graph = graph;
+        this.modelGraph = modelGraph;
         this.random = random;
         this.config = config;
     }
