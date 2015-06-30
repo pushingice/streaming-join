@@ -29,18 +29,19 @@ public class MessageGen {
             return count < messageCount;
         }
 
-        private Message getOrCreate(Map<String, Message> map, String key) {
-            if (!map.containsKey(key)) {
-                map.put(key, new Message(config, random, key));
-            }
-            return map.get(key);
-        }
-
         @Override
         public Collection<Message> next() {
+            List<Message> msgs = messagesFromGraph();
+            Collections.shuffle(msgs);
+            return msgs;
+        }
 
+        private List<Message> messagesFromGraph() {
             List<Message> msgs = new ArrayList<>();
-            Graph messageGraph = TinkerGraph.open();
+            Graph relationGraph = TinkerGraph.open();
+            Double deletePct = Double.parseDouble(
+                    config.getProperty(Constants.DELETE_PERCENT));
+
             modelGraph.edges().forEachRemaining(e -> {
                 String fromType = e.outVertex().label();
                 String toType = e.inVertex().label();
@@ -48,42 +49,42 @@ public class MessageGen {
                         e.property(Constants.FROM_WEIGHT).value().toString());
                 int toWeight = Integer.parseInt(
                         e.property(Constants.TO_WEIGHT).value().toString());
-                boolean hasFrom = messageGraph.traversal().V()
+                boolean hasFrom = relationGraph.traversal().V()
                         .has(fromType).hasNext();
-                boolean hasTo = messageGraph.traversal().V()
+                boolean hasTo = relationGraph.traversal().V()
                         .has(toType).hasNext();
                 if (!hasFrom) {
-                    LOG.info("no nodes for from type {}, adding", fromType);
                     IntStream.range(0, fromWeight).forEach(x ->
-                            messageGraph.addVertex(fromType,
+                            relationGraph.addVertex(fromType,
                                     new Message(config, random, fromType)));
-                    messageGraph.traversal().V().has(fromType).forEachRemaining(
-                            v -> LOG.info(v.property(fromType).value().toString())
-                    );
                 }
 
                 if (!hasTo) {
-                    LOG.info("no nodes for to type {}, adding", toType);
                     IntStream.range(0, toWeight).forEach(x ->
-                            messageGraph.addVertex(toType,
+                            relationGraph.addVertex(toType,
                                     new Message(config, random, toType)));
-                    messageGraph.traversal().V().has(toType).forEachRemaining(
-                            v -> LOG.info(v.property(toType).value().toString())
-                    );
                 }
 
-                messageGraph.traversal().V().has(toType).forEachRemaining(t ->
-                    messageGraph.traversal().V().has(fromType).forEachRemaining(f -> {
-                        Message from = ((Message) f.property(fromType).value()).copy();
-                        Message to = ((Message) t.property(toType).value()).copy();
-                        from.setFkId(to.getId());
-                        from.setFkMessageType(to.getMessageType());
-                        msgs.add(from);
-                        msgs.add(to);
-                    })
+                relationGraph.traversal().V().has(toType).forEachRemaining(
+                        t -> relationGraph.traversal().V().has(fromType)
+                                .forEachRemaining(f -> {
+
+                            Message from = ((Message) f.property(fromType)
+                                    .value()).copy();
+                            Message to = ((Message) t.property(toType)
+                                    .value()).copy();
+                            from.setFkId(to.getId());
+                            from.setFkMessageType(to.getMessageType());
+                            msgs.add(from);
+                            msgs.add(to);
+                            if (random.nextDouble() < deletePct) {
+                                Message del = from.copy();
+                                del.setCrudType(Constants.DELETE);
+                                msgs.add(del);
+                            }
+                        })
                 );
             });
-
             count += msgs.size();
             return msgs;
         }

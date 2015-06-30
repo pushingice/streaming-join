@@ -32,6 +32,11 @@
             <artifactId>tinkergraph-gremlin</artifactId>
             <version>3.0.0.M8-incubating</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -4,6 +4,9 @@ public final class Constants {
 
     public static final String FROM_WEIGHT = "fromWeight";
     public static final String TO_WEIGHT = "toWeight";
+    public static final String CREATE = "create";
+    public static final String DELETE = "delete";
+    public static final String DELETE_PERCENT = "deletePercent";
     public static final String FOREIGN_KEY = "foreignKey";
     public static final String CONFIG_SCENARIO_FILE = "scenarioFile";
     public static final String CONFIG_MESSAGE_BYTES = "messageBytes";
