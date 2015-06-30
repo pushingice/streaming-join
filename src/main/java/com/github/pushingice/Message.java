@@ -3,20 +3,21 @@ package com.github.pushingice;
 import java.util.Base64;
 import java.util.Properties;
 import java.util.Random;
+import java.util.UUID;
 
 public class Message {
 
     private String messageType;
     private String fkMessageType = "";
-    private long fkId = 0;
-    private long id;
+    private UUID fkId = null;
+    private UUID id;
     private long timestamp;
     private String crudType = Constants.CREATE;
     private String content;
 
     public Message(Properties props, Random random, String messageType) {
         this.messageType = messageType;
-        id = random.nextLong();
+        id = UUID.randomUUID();
         byte[] rawContent = new byte[Integer.parseInt(
                 props.getProperty(Constants.CONFIG_MESSAGE_BYTES))];
         random.nextBytes(rawContent);
@@ -24,8 +25,8 @@ public class Message {
         content = Base64.getEncoder().encodeToString(rawContent);
     }
 
-    public Message(String messageType, long id, String fkMessageType,
-                   long fkId, String content) {
+    public Message(String messageType, UUID id, String fkMessageType,
+                   UUID fkId, String content) {
         this.messageType = messageType;
         this.id = id;
         this.content = content;
@@ -39,7 +40,7 @@ public class Message {
         return new Message(messageType, id, fkMessageType, fkId, content);
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -55,7 +56,7 @@ public class Message {
         return fkMessageType;
     }
 
-    public long getFkId() {
+    public UUID getFkId() {
         return fkId;
     }
 
@@ -63,7 +64,7 @@ public class Message {
         this.fkMessageType = fkMessageType;
     }
 
-    public void setFkId(long fkId) {
+    public void setFkId(UUID fkId) {
         this.fkId = fkId;
     }
 

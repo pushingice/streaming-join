@@ -1,6 +1,5 @@
 package com.github.pushingice;
 
-import com.google.common.primitives.Longs;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +8,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.SecureRandom;
 import java.util.*;
 
 public class Driver {
@@ -39,7 +37,7 @@ public class Driver {
 
         Graph graph = CSVToGraph.parse("src/main/resources/" +
                 config.getProperty(Constants.CONFIG_SCENARIO_FILE));
-        Random random = new SecureRandom();
+        Random random = new Random();
         MessageGen messageGen = new MessageGen(graph, random, config);
 
         for (Collection<Message> coll: messageGen.getIterable()) {

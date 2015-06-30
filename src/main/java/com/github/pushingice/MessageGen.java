@@ -1,5 +1,6 @@
 package com.github.pushingice;
 
+import org.apache.tinkerpop.gremlin.process.traversal.step.util.Tree;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.slf4j.Logger;
@@ -32,6 +33,8 @@ public class MessageGen {
         @Override
         public Collection<Message> next() {
             List<Message> msgs = messagesFromGraph();
+            LOG.info("{}", modelGraph.traversal().V().out().tree().next());
+
             Collections.shuffle(msgs);
             return msgs;
         }
@@ -69,20 +72,20 @@ public class MessageGen {
                         t -> relationGraph.traversal().V().has(fromType)
                                 .forEachRemaining(f -> {
 
-                            Message from = ((Message) f.property(fromType)
-                                    .value()).copy();
-                            Message to = ((Message) t.property(toType)
-                                    .value()).copy();
-                            from.setFkId(to.getId());
-                            from.setFkMessageType(to.getMessageType());
-                            msgs.add(from);
-                            msgs.add(to);
-                            if (random.nextDouble() < deletePct) {
-                                Message del = from.copy();
-                                del.setCrudType(Constants.DELETE);
-                                msgs.add(del);
-                            }
-                        })
+                                    Message from = ((Message) f.property(fromType)
+                                            .value()).copy();
+                                    Message to = ((Message) t.property(toType)
+                                            .value()).copy();
+                                    from.setFkId(to.getId());
+                                    from.setFkMessageType(to.getMessageType());
+                                    msgs.add(from);
+                                    msgs.add(to);
+                                    if (random.nextDouble() < deletePct) {
+                                        Message del = from.copy();
+                                        del.setCrudType(Constants.DELETE);
+                                        msgs.add(del);
+                                    }
+                                })
                 );
             });
             count += msgs.size();

@@ -21,9 +21,26 @@ public class CSVToGraph {
             CSVToGraph.class);
 
     private static void addEdge(CSVRecord rec, Graph g) {
-        Vertex v0 = g.addVertex(rec.get(0));
-        Vertex v1 = g.addVertex(rec.get(1));
-        v0.addEdge(Constants.FOREIGN_KEY, v1,
+        String fromId = rec.get(0);
+        String toId = rec.get(1);
+        Vertex fromV, toV;
+        if (g.traversal().V().hasLabel(fromId).hasNext()) {
+            LOG.info("has node {}", fromId);
+            fromV = g.traversal().V().hasLabel(fromId).next();
+        } else {
+            LOG.info("adding node {}", fromId);
+            fromV = g.addVertex(fromId);
+        }
+        if (g.traversal().V().hasLabel(toId).hasNext()) {
+            LOG.info("has node {}", toId);
+            toV = g.traversal().V().hasLabel(toId).next();
+        } else {
+            LOG.info("adding node {}", toId);
+            toV = g.addVertex(toId);
+        }
+
+
+        fromV.addEdge(Constants.FOREIGN_KEY, toV,
                 Constants.FROM_WEIGHT, rec.get(2),
                 Constants.TO_WEIGHT, rec.get(3));
 
