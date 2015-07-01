@@ -47,6 +47,10 @@ public class Message {
         return content;
     }
 
+    public void setContent(String content) {
+        this.content = content;
+    }
+
     public String getMessageType() {
         return messageType;
     }
@@ -84,6 +88,8 @@ public class Message {
                 ", fkId=" + fkId +
                 ", ts=" + timestamp +
                 ", crud='" + crudType + "'" +
+                ", content='" + content.substring(0, 4) + ".." +
+                content.substring(content.length()-4, content.length()) + "'" +
                 '}';
     }
 
