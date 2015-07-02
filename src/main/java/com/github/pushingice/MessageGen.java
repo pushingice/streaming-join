@@ -22,6 +22,21 @@ public class MessageGen {
     private static final Logger LOG = LoggerFactory.getLogger(
             Driver.class.getCanonicalName());
 
+    private void treeversal(Tree tree) {
+        if(!tree.isEmpty()) {
+
+            List<Tree> lt = tree.splitParents();
+            if (lt.size() > 1) {
+                lt.forEach(this::treeversal);
+            } else {
+                Vertex parent = (Vertex) tree.getObjectsAtDepth(1).get(0);
+                List<Vertex> children = (List<Vertex>) tree.getObjectsAtDepth(2);
+                LOG.info("{}", parent.label());
+                children.forEach(c -> LOG.info("{}", c.label()));
+            }
+        }
+    }
+
 
     private class MessageIterator implements Iterator<Collection<Message>> {
 
@@ -35,20 +50,10 @@ public class MessageGen {
         @Override
         public Collection<Message> next() {
             List<Message> msgs = messagesFromGraph();
-            List<GraphTraversal> traversals = new ArrayList<>();
-            traversals.add(modelGraph.traversal().V().out());
-            traversals.add(modelGraph.traversal().V().out().out());
-            traversals.add(modelGraph.traversal().V().out().out().out());
-            traversals.add(modelGraph.traversal().V().out().out().out().out());
+            GraphTraversal traversal = modelGraph.traversal().V().out();
 
-
-            traversals.forEach(trav -> {
-                Tree tree = (Tree) trav.tree().next();
-                if (!tree.isEmpty()) {
-                    LOG.info("{} {}", tree, tree.isLeaf());
-                    LOG.info("{}", ((Vertex) tree.keySet().iterator().next()).label());
-                }
-            });
+            Tree tree = (Tree) traversal.tree().next();
+            treeversal(tree);
 
             Collections.shuffle(msgs);
             return msgs;
