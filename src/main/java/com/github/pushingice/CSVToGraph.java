@@ -48,7 +48,7 @@ public class CSVToGraph {
     }
 
     public static void LogAllEdges(Graph g) {
-        g.traversal().E().forEachRemaining(x -> LOG.info("{} -[{}]-> {} | {}:{}",
+        g.traversal().E().forEachRemaining(x -> LOG.info("{} =[{}]=> {} | {}:{}",
                 x.outVertex().label(), x.label(), x.inVertex().label(),
                 x.property(Constants.FROM_WEIGHT),
                 x.property(Constants.TO_WEIGHT)));

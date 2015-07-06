@@ -81,6 +81,13 @@ public class Message {
 
     @Override
     public String toString() {
+        String shortContent;
+        if (content.length() > 8) {
+            shortContent = content.substring(0, 4) + ".." +
+                    content.substring(content.length()-4, content.length());
+        } else {
+            shortContent = content;
+        }
         return "Message{" +
                 "messageType='" + messageType + "'" +
                 ", id=" + id +
@@ -88,8 +95,7 @@ public class Message {
                 ", fkId=" + fkId +
                 ", ts=" + timestamp +
                 ", crud='" + crudType + "'" +
-                ", content='" + content.substring(0, 4) + ".." +
-                content.substring(content.length()-4, content.length()) + "'" +
+                ", content='" + shortContent + "'" +
                 '}';
     }
 

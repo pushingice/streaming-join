@@ -39,3 +39,20 @@ we could expose these to users as a REST tree:
 /A/[a_id]/C/[c_id]
 ```
 
+## Data Model File Format
+
+In `src/main/java/resources` there are CSV formatted files describing different
+data models. Select a file for the run by changing the `scenarioFile` parameter
+in `config.properties`. The general format is:
+```
+rootNode: String, childNode: String, rootWeight: int, childWeight: int
+parentNode: String, childNode: String, parentWeight: int, childWeight: int
+...
+parentNode: String, childNode: String, parentWeight: int, childWeight: int
+```
+Here root node is the top of the query tree. If the data model is circular or
+symmetric it does not matter which node is designated as the root. The weights
+ are expressed as a ratio of data set sizes. For example `A,B,1,2` means for
+ every `A` there are exactly two `B`'s.
+
+

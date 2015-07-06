@@ -41,8 +41,9 @@ public class Driver {
         MessageGen messageGen = new MessageGen(graph, random, config);
 
         for (Collection<Message> coll: messageGen.getIterable()) {
+            LOG.info("-----");
             for (Message m : coll) {
-                LOG.info(m.toString());
+//                LOG.info(m.toString());
             }
         }
 

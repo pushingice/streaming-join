@@ -22,19 +22,42 @@ public class MessageGen {
     private static final Logger LOG = LoggerFactory.getLogger(
             Driver.class.getCanonicalName());
 
+    private void accumulate(Tree tree, List<List<String>> queries) {
+        Vertex parent = (Vertex) tree.getObjectsAtDepth(1).get(0);
+        List<Vertex> children = (List<Vertex>) tree.getObjectsAtDepth(2);
+        LOG.info("t {}", tree);
+        LOG.info("p {}", parent.label());
+        children.forEach(child -> {
+            LOG.info("c {}", child.label());
+            List<String> query = new ArrayList<>();
+            query.add(parent.label());
+            query.add(child.label());
+            queries.add(query);
+            queries.forEach(q -> {
+                if (q.get(q.size()-1).equals(parent.label()) &&
+                        !q.contains(child.label())) {
+                    q.add(child.label());
+                }
+            });
+        });
+//        queries.forEach(q -> LOG.info("{}", q));
+
+    }
+
     private void treeversal(Tree tree) {
+
         if(!tree.isEmpty()) {
 
             List<Tree> lt = tree.splitParents();
+            List<List<String>> queries = new ArrayList<>();
+            // Is there more than one subtree? If so, iterate over them
             if (lt.size() > 1) {
-                lt.forEach(this::treeversal);
-            } else {
-                Vertex parent = (Vertex) tree.getObjectsAtDepth(1).get(0);
-                List<Vertex> children = (List<Vertex>) tree.getObjectsAtDepth(2);
-                LOG.info("{}", parent.label());
-                children.forEach(c -> LOG.info("{}", c.label()));
+                LOG.info("s {}", lt.size());
+                lt.forEach(t -> accumulate(t, queries));
             }
+            queries.forEach(q -> LOG.info("{}", q));
         }
+
     }
 
 
@@ -88,19 +111,24 @@ public class MessageGen {
                                     new Message(config, random, toType)));
                 }
 
+                // this will send dupes, consider it a feature
                 messageGraph.traversal().V().has(toType).forEachRemaining(
                         t -> messageGraph.traversal().V().has(fromType)
                                 .forEachRemaining(f -> {
-
+                                    // Consider 'From' => 'To'
                                     Message from = ((Message) f.property(fromType)
                                             .value()).copy();
                                     Message to = ((Message) t.property(toType)
                                             .value()).copy();
+                                    // Send 'From'
+                                    msgs.add(from.copy());
+                                    // Send 'Edge Link'
                                     from.setFkId(to.getId());
                                     from.setFkMessageType(to.getMessageType());
-                                    from.setContent(to.getContent());
+                                    from.setContent("");
                                     msgs.add(from);
-//                                    msgs.add(to);
+                                    // Send 'To'
+                                    msgs.add(to);
                                     if (random.nextDouble() < deletePct) {
                                         Message del = from.copy();
                                         del.setCrudType(Constants.DELETE);
