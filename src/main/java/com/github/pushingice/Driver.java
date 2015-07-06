@@ -42,9 +42,9 @@ public class Driver {
 
         for (Collection<Message> coll: messageGen.getIterable()) {
             LOG.info("-----");
-            for (Message m : coll) {
+//            for (Message m : coll) {
 //                LOG.info(m.toString());
-            }
+//            }
         }
 
     }
