@@ -54,8 +54,9 @@ public class MessageGen {
     }
 
     private Graph modelToMessageGraph() {
-        Graph baseGraph = TinkerGraph.open();
+
         Graph contentGraph = TinkerGraph.open();
+        Graph baseGraph = TinkerGraph.open();
         modelGraph.edges().forEachRemaining(e -> {
             String fromType = e.outVertex().label();
             String toType = e.inVertex().label();
@@ -79,7 +80,6 @@ public class MessageGen {
                                 new Message(config, random, toType)));
             }
 
-            // this will send dupes, consider it a feature
             GraphTraversal<Vertex, Vertex> baseTo = baseGraph.traversal()
                     .V().has(toType);
             GraphTraversal<Vertex, Vertex> baseFrom = baseGraph.traversal()
@@ -112,11 +112,12 @@ public class MessageGen {
                             toV = (Vertex) toT.next();
                         }
                         // Send 'Edge Link'
-                        from.setFkId(to.getId());
-                        from.setFkMessageType(to.getMessageType());
-                        from.setContent("");
+                        Message link = from.copy();
+                        link.setFkId(to.getId());
+                        link.setFkMessageType(to.getMessageType());
+                        link.setContent("");
                         fromV.addEdge(Constants.FOREIGN_KEY, toV,
-                                Constants.MSG, from);
+                                Constants.MSG, link);
                     })
             );
         });
@@ -135,8 +136,8 @@ public class MessageGen {
 
         @Override
         public Collection<Message> next() {
-            List<Message> msgs = new ArrayList<>();
-            Graph contentGraph = modelToMessageGraph();
+            Set<Message> msgs = new HashSet<>();
+            Graph contentGraph = TinkerGraph.open();
             GraphTraversal traversal = modelGraph.traversal().V().out();
 
             Tree tree = (Tree) traversal.tree().next();
@@ -147,42 +148,84 @@ public class MessageGen {
                 Iterator<String> toIterator = q.iterator();
                 toIterator.next();
                 while(toIterator.hasNext()) {
-                    String from = fromIterator.next();
-                    String to = toIterator.next();
-                    LOG.info("from {}", from);
-                    LOG.info("to {}", to);
-                    // bwuh
-                    contentGraph.traversal().V().hasLabel(from).out().hasLabel(to).inE()
-                            .forEachRemaining(x -> LOG.info("e {}", x));
+                    String fromType = fromIterator.next();
+                    String toType = toIterator.next();
+                    LOG.info("from {}", fromType);
+                    LOG.info("to {}", toType);
+                    List<Integer> weights = new ArrayList<>();
+                    modelGraph.traversal().V().hasLabel(fromType)
+                            .out().hasLabel(toType).inE()
+                            .forEachRemaining(x -> {
+                                weights.add(Integer.parseInt((String) x.property(Constants.FROM_WEIGHT).value()));
+                                weights.add(Integer.parseInt((String) x.property(Constants.TO_WEIGHT).value()));
+                            });
+                    int fromWeight = weights.get(0);
+                    int toWeight = weights.get(1);
+                    Set<Message> fromMsgs = new HashSet<>();
+                    Set<Message> toMsgs = new HashSet<>();
+                    Vertex fromV, toV;
+
+                    GraphTraversal fromTrav = contentGraph.traversal().V()
+                            .hasLabel(fromType);
+                    if (!fromTrav.hasNext()) {
+                        for (int i = 0; i < fromWeight; i++) {
+                            Message fromMsg = new Message(config, random, fromType);
+                            fromV = contentGraph.addVertex(T.label, fromType,
+                                    Constants.MSG_ID, fromMsg.getId(),
+                                    Constants.MSG, fromMsg);
+                            msgs.add(fromMsg);
+                            fromMsgs.add(fromMsg);
+                        }
+                    } else {
+                        while (fromTrav.hasNext()) {
+                            fromV = (Vertex) fromTrav.next();
+                            Message fromMsg = (Message) fromV
+                                    .property(Constants.MSG).value();
+                            fromMsgs.add(fromMsg);
+                        }
+                    }
+
+                    GraphTraversal toTrav = contentGraph.traversal().V()
+                            .hasLabel(toType);
+
+                    if (!toTrav.hasNext()) {
+                        for (int i = 0; i < toWeight; i++) {
+                            Message toMsg = new Message(config, random, toType);
+                            msgs.add(toMsg);
+                            toMsgs.add(toMsg);
+                        }
+                    } else {
+                        while (toTrav.hasNext()) {
+                            toV = (Vertex) toTrav.next();
+                            Message toMsg = (Message) toV
+                                    .property(Constants.MSG).value();
+                            toMsgs.add(toMsg);
+                        }
+
+                    }
+                    for (Message fromMsg : fromMsgs) {
+                        for (Message toMsg : toMsgs) {
+                            toV = contentGraph.addVertex(T.label, toType,
+                                    Constants.MSG_ID, toMsg.getId(),
+                                    Constants.MSG, toMsg);
+                            fromV = contentGraph.addVertex(T.label, fromType,
+                                    Constants.MSG_ID, fromMsg.getId(),
+                                    Constants.MSG, fromMsg);
+                            Message link = fromMsg.copy();
+                            link.setFkId(toMsg.getId());
+                            link.setFkMessageType(toMsg.getMessageType());
+                            link.setContent("");
+                            fromV.addEdge(Constants.FOREIGN_KEY, toV,
+                                    Constants.MSG, link);
+                            msgs.add(link);
+                        }
+                    }
                 }
 
             });
-            contentGraph.traversal().E().forEachRemaining(x -> {
-                msgs.add((Message) x.outVertex()
-                        .property(Constants.MSG).value());
-                msgs.add((Message) x.inVertex()
-                        .property(Constants.MSG).value());
-                msgs.add((Message) x.property(Constants.MSG).value());
-            });
-            Collections.shuffle(msgs);
             count += msgs.size();
             return msgs;
         }
-
-//        private Graph messagesFromGraph() {
-//            List<Message> msgs = new ArrayList<>();
-//            Graph contentGraph = modelToMessageGraph();
-//            Double deletePct = Double.parseDouble(
-//                    config.getProperty(Constants.DELETE_PERCENT));
-//
-//            return contentGraph;
-//
-////                                    if (random.nextDouble() < deletePct) {
-////                                        Message del = from.copy();
-////                                        del.setCrudType(Constants.DELETE);
-////                                        msgs.add(del);
-////                                    }
-//        }
 
     }
 

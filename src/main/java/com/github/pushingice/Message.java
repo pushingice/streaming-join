@@ -99,4 +99,31 @@ public class Message {
                 '}';
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Message message = (Message) o;
+
+        if (fkId != message.fkId) return false;
+        if (id != message.id) return false;
+        if (!content.equals(message.content)) return false;
+        if (!crudType.equals(message.crudType)) return false;
+        if (!fkMessageType.equals(message.fkMessageType)) return false;
+        if (!messageType.equals(message.messageType)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = messageType.hashCode();
+        result = 31 * result + fkMessageType.hashCode();
+        result = 31 * result + (int) (fkId ^ (fkId >>> 32));
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + crudType.hashCode();
+        result = 31 * result + content.hashCode();
+        return result;
+    }
 }
