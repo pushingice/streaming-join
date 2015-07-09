@@ -1,8 +1,10 @@
 package com.github.pushingice;
 
+import org.apache.tinkerpop.gremlin.process.traversal.Path;
 import org.apache.tinkerpop.gremlin.process.traversal.T;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.Tree;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
@@ -18,6 +20,7 @@ public class MessageGen {
     private Graph modelGraph;
     private Random random;
     private Properties config;
+    private int queryDepth;
     Set<List<String>> queries;
 
 
@@ -73,7 +76,7 @@ public class MessageGen {
 
         @Override
         public Collection<Message> next() {
-            Set<Message> msgs = new HashSet<>();
+            List<Message> msgs = new LinkedList<>();
             Graph contentGraph = TinkerGraph.open();
             GraphTraversal traversal = modelGraph.traversal().V().out();
 
@@ -95,8 +98,8 @@ public class MessageGen {
                             });
                     int fromWeight = weights.get(0);
                     int toWeight = weights.get(1);
-                    Set<Message> fromMsgs = new HashSet<>();
-                    Set<Message> toMsgs = new HashSet<>();
+                    List<Message> fromMsgs = new LinkedList<>();
+                    List<Message> toMsgs = new LinkedList<>();
                     Vertex fromV, toV;
 
                     GraphTraversal fromTrav = contentGraph.traversal().V()
@@ -139,31 +142,103 @@ public class MessageGen {
 
                     }
                     for (Message fromMsg : fromMsgs) {
-                        for (Message toMsg : toMsgs) {
-                            toV = contentGraph.addVertex(T.label, toType,
-                                    Constants.MSG_ID, toMsg.getId(),
-                                    Constants.MSG_TYPE, toMsg.getMessageType(),
-                                    Constants.MSG, toMsg);
+                        GraphTraversal fromT = contentGraph.traversal().V()
+                                .has(Constants.MSG_ID, fromMsg.getId());
+                        if (fromT.hasNext()) {
+                            fromV = (Vertex) fromT.next();
+                        } else {
                             fromV = contentGraph.addVertex(T.label, fromType,
                                     Constants.MSG_ID, fromMsg.getId(),
                                     Constants.MSG_TYPE, fromMsg.getMessageType(),
                                     Constants.MSG, fromMsg);
-                            Message link = fromMsg.copy();
-                            link.setFkId(toMsg.getId());
-                            link.setFkMessageType(toMsg.getMessageType());
-                            link.setContent("");
-                            fromV.addEdge(Constants.FOREIGN_KEY, toV,
-                                    Constants.MSG, link);
-                            msgs.add(link);
+                        }
+
+                        for (Message toMsg : toMsgs) {
+                            GraphTraversal toT = contentGraph.traversal().V()
+                                    .has(Constants.MSG_ID, toMsg.getId());
+                            if (toT.hasNext()) {
+                                toV = (Vertex) toT.next();
+                            } else {
+                                toV = contentGraph.addVertex(T.label, toType,
+                                    Constants.MSG_ID, toMsg.getId(),
+                                    Constants.MSG_TYPE, toMsg.getMessageType(),
+                                    Constants.MSG, toMsg);
+                            }
+
+                            GraphTraversal edgeT = contentGraph.traversal().E()
+                                    .has(Constants.MSG_ID, fromMsg.getId())
+                                    .has(Constants.TO_MSG_ID, toMsg.getId());
+                            if (!edgeT.hasNext()) {
+                                Message linkMsg = fromMsg.copy();
+                                linkMsg.setFkId(toMsg.getId());
+                                linkMsg.setFkMessageType(toMsg.getMessageType());
+                                linkMsg.setContent("");
+                                fromV.addEdge(Constants.FOREIGN_KEY, toV,
+                                        Constants.MSG, linkMsg,
+                                        Constants.MSG_TYPE, fromMsg.getMessageType(),
+                                        Constants.TO_MSG_TYPE, toMsg.getMessageType(),
+                                        Constants.MSG_ID, fromMsg.getId(),
+                                        Constants.TO_MSG_ID, toMsg.getId());
+
+                                msgs.add(linkMsg);
+                            }
+
+
                         }
                     }
                 }
 
             });
 
-            queryPaths.forEach(path -> {
+            for(List<String> path : queryPaths) {
+
                 LOG.info("p {}", path);
-            });
+                if (path.size() > queryDepth) {
+                    continue;
+                }
+                GraphTraversal<Vertex, Path> contentT = null;
+                switch (path.size()) {
+                    case 2:
+                        contentT = contentGraph.traversal().V()
+                                .has(Constants.MSG_TYPE, path.get(0)).out()
+                                .has(Constants.MSG_TYPE, path.get(1)).path();
+                        break;
+                    case 3:
+                        contentT = contentGraph.traversal().V()
+                                .has(Constants.MSG_TYPE, path.get(0)).out()
+                                .has(Constants.MSG_TYPE, path.get(1)).out()
+                                .has(Constants.MSG_TYPE, path.get(2)).path();
+                        break;
+                    case 4:
+                        contentT = contentGraph.traversal().V()
+                                .has(Constants.MSG_TYPE, path.get(0)).out()
+                                .has(Constants.MSG_TYPE, path.get(1)).out()
+                                .has(Constants.MSG_TYPE, path.get(2)).out()
+                                .has(Constants.MSG_TYPE, path.get(3)).path();
+                        break;
+                    default:
+                        LOG.info("Depth {} not supported yet", path.size());
+                }
+
+
+                while(contentT != null && contentT.hasNext()) {
+                    List<Object> itemO = contentT.next().objects();
+                    List<String> route = new LinkedList<>();
+                    Map<String, String> content = new HashMap<>();
+                    int sum = 0;
+                    for (Object v : itemO) {
+                        Message m = (Message) ((Vertex) v).property(Constants.MSG).value();
+                        route.add(m.getMessageType());
+                        route.add(Long.toString(m.getId()));
+                        content.put(m.getMessageType(), m.getContent());
+                        sum += m.getContent().length();
+                    }
+                    LOG.info("{}", route);
+                    LOG.info("{}", content);
+                    LOG.info("{}", sum);
+                }
+
+            }
 
             count += msgs.size();
             return msgs;
@@ -186,6 +261,8 @@ public class MessageGen {
         this.random = random;
         this.config = config;
         this.queries = new HashSet<>();
+        this.queryDepth = Integer.parseInt(
+                config.getProperty(Constants.CONFIG_QUERY_DEPTH));
     }
 
     public Iterable<Collection<Message>> getIterable() {

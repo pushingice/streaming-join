@@ -17,8 +17,8 @@ public class Message {
     public Message(Properties props, Random random, String messageType) {
         this.messageType = messageType;
         id = IDCounter.next();
-        byte[] rawContent = new byte[Integer.parseInt(
-                props.getProperty(Constants.CONFIG_MESSAGE_BYTES))];
+        byte[] rawContent = new byte[random.nextInt(Integer.parseInt(
+                props.getProperty(Constants.CONFIG_MESSAGE_BYTES)))];
         random.nextBytes(rawContent);
         timestamp = System.nanoTime();
         content = Base64.getEncoder().encodeToString(rawContent);
