@@ -4,6 +4,7 @@ public final class Constants {
 
     public static final String FROM_WEIGHT = "fromWeight";
     public static final String TO_WEIGHT = "toWeight";
+    public static final String MSG_TYPE = "msgType";
     public static final String MSG_ID = "msgId";
     public static final String MSG = "msg";
     public static final String CREATE = "create";
