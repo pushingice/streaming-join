@@ -21,7 +21,6 @@ public class MessageGen {
     private Random random;
     private Properties config;
     private int queryDepth;
-    Set<List<String>> queries;
 
 
     private static final Logger LOG = LoggerFactory.getLogger(
@@ -220,23 +219,21 @@ public class MessageGen {
                         LOG.info("Depth {} not supported yet", path.size());
                 }
 
-
+                List<Query> queries = new ArrayList<>();
                 while(contentT != null && contentT.hasNext()) {
                     List<Object> itemO = contentT.next().objects();
-                    List<String> route = new LinkedList<>();
-                    Map<String, String> content = new HashMap<>();
-                    int sum = 0;
+                    Query query = new Query();
                     for (Object v : itemO) {
                         Message m = (Message) ((Vertex) v).property(Constants.MSG).value();
-                        route.add(m.getMessageType());
-                        route.add(Long.toString(m.getId()));
-                        content.put(m.getMessageType(), m.getContent());
-                        sum += m.getContent().length();
+                        query.addQueryNode(m.getMessageType(), m.getId());
+                        query.addTreeContent(m.getMessageType(), m.getContent());
                     }
-                    LOG.info("{}", route);
-                    LOG.info("{}", content);
-                    LOG.info("{}", sum);
+                    LOG.info("{}", query);
+                    queries.add(query);
                 }
+                Query merged = new Query();
+                merged.merge(queries.get(0));
+                LOG.info("{}", merged);
 
             }
 
@@ -260,7 +257,6 @@ public class MessageGen {
         this.modelGraph = modelGraph;
         this.random = random;
         this.config = config;
-        this.queries = new HashSet<>();
         this.queryDepth = Integer.parseInt(
                 config.getProperty(Constants.CONFIG_QUERY_DEPTH));
     }

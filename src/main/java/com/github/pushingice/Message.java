@@ -79,15 +79,18 @@ public class Message {
         this.timestamp = timestamp;
     }
 
+    public static String shortenContent(String shorten) {
+        if (shorten.length() > 8) {
+            return shorten.substring(0, 4) + ".." +
+                    shorten.substring(shorten.length() - 4, shorten.length());
+        } else {
+            return shorten;
+        }
+    }
+
     @Override
     public String toString() {
-        String shortContent;
-        if (content.length() > 8) {
-            shortContent = content.substring(0, 4) + ".." +
-                    content.substring(content.length()-4, content.length());
-        } else {
-            shortContent = content;
-        }
+
         return "Message{" +
                 "messageType='" + messageType + "'" +
                 ", id=" + id +
@@ -95,7 +98,7 @@ public class Message {
                 ", fkId=" + fkId +
                 ", ts=" + timestamp +
                 ", crud='" + crudType + "'" +
-                ", content='" + shortContent + "'" +
+                ", content='" + shortenContent(content) + "'" +
                 '}';
     }
 
