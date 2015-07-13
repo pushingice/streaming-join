@@ -1,5 +1,8 @@
 package com.github.pushingice;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,10 +12,11 @@ public class Query {
 
 
     private List<String> queryNodes = new ArrayList<>();
-    private List<String> leafNodes = new ArrayList<>();
     private Map<String, String> treeContent = new HashMap<>();
     private String leafType = "";
     private Map<Long, String> leafContent = new HashMap<>();
+    private static final Logger LOG = LoggerFactory.getLogger(
+            Driver.class.getCanonicalName());
 
     public String getQueryRoute() {
         return String.join("/", queryNodes);
@@ -41,15 +45,31 @@ public class Query {
         leafContent.put(id, content);
     }
 
-    public void merge(Query other) {
+    public boolean mergeIfPossible(Query other) {
         int len = other.getQueryNodes().size();
-        for (int i = 0; i < len-2; i++) {
-            queryNodes.add(other.getQueryNodes().get(i));
-        }
-        leafType = other.getQueryNodes().get(len-2);
-        queryNodes.add(leafType + "s");
-        leafNodes.add(other.getQueryNodes().get(len - 1));
 
+        if (queryNodes.isEmpty()) {
+            for (int i = 0; i < len - 2; i++) {
+                queryNodes.add(other.getQueryNodes().get(i));
+            }
+            leafType = other.getQueryNodes().get(len-2);
+            queryNodes.add(leafType + "s");
+
+        } else {
+            for (int i = 0; i < len - 2; i++) {
+                String otherNode = other.queryNodes.get(i);
+                String thisNode = queryNodes.get(i);
+                if (!otherNode.equals(thisNode)) {
+                    return false;
+                }
+            }
+
+        }
+        treeContent = other.treeContent;
+        long otherId = Long.parseLong(other.getQueryNodes().get(len - 1));
+        leafContent.put(otherId, treeContent.get(leafType));
+
+        return true;
     }
 
     @Override
@@ -58,8 +78,7 @@ public class Query {
                 "queryString=" + getQueryRoute() +
                 ", treeContent=" + treeContent.keySet() +
                 ", leafType='" + leafType + '\'' +
-                ", leafNodes=" + leafNodes +
-                ", leafContent=" + leafContent +
+                ", leafContent=" + leafContent.keySet() +
                 '}';
     }
 }

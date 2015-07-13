@@ -4,7 +4,6 @@ import org.apache.tinkerpop.gremlin.process.traversal.Path;
 import org.apache.tinkerpop.gremlin.process.traversal.T;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.Tree;
-import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
@@ -228,12 +227,28 @@ public class MessageGen {
                         query.addQueryNode(m.getMessageType(), m.getId());
                         query.addTreeContent(m.getMessageType(), m.getContent());
                     }
-                    LOG.info("{}", query);
+                    LOG.info("q {}", query);
                     queries.add(query);
                 }
+
+                boolean nextMerge = true;
                 Query merged = new Query();
-                merged.merge(queries.get(0));
-                LOG.info("{}", merged);
+                List<Query> mergedQueries = new ArrayList<>();
+                for (Query q : queries) {
+                    if (nextMerge) {
+                        merged = new Query();
+                        nextMerge = !merged.mergeIfPossible(q);
+                    } else {
+                        nextMerge = !merged.mergeIfPossible(q);
+                        if (nextMerge) {
+                            mergedQueries.add(merged);
+                            merged = new Query();
+                            nextMerge = !merged.mergeIfPossible(q);
+                        }
+                    }
+                }
+                mergedQueries.add(merged);
+                mergedQueries.forEach(x -> LOG.info("m {}", x));
 
             }
 
