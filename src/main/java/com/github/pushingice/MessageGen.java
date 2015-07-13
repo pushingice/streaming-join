@@ -19,7 +19,9 @@ public class MessageGen {
     private Graph modelGraph;
     private Random random;
     private Properties config;
+    private Set<Query> queries;
     private int queryDepth;
+
 
 
     private static final Logger LOG = LoggerFactory.getLogger(
@@ -74,6 +76,8 @@ public class MessageGen {
 
         @Override
         public Collection<Message> next() {
+            // Clear the query set
+            queries.clear();
             // collects messages to send
             List<Message> msgs = new LinkedList<>();
             // use Tinkerpop to build and query a message graph
@@ -105,8 +109,6 @@ public class MessageGen {
                     int fromWeight = weights.get(0);
                     int toWeight = weights.get(1);
                     // accumulate outgoing and incoming messages
-//                    List<Message> fromMsgs = new LinkedList<>();
-//                    List<Message> toMsgs = new LinkedList<>();
                     SortedSet<Message> fromMsgs = new TreeSet<>(new MessageComparator());
                     SortedSet<Message> toMsgs = new TreeSet<>(new MessageComparator());
                     // reference to message vertex
@@ -211,7 +213,6 @@ public class MessageGen {
 
             for(List<String> path : queryPaths) {
 
-                LOG.info("p {}", path);
                 if (path.size() > queryDepth) {
                     continue;
                 }
@@ -239,7 +240,7 @@ public class MessageGen {
                         LOG.info("Depth {} not supported yet", path.size());
                 }
 
-                List<Query> queries = new ArrayList<>();
+                List<Query> stepQueries = new ArrayList<>();
                 while(contentT != null && contentT.hasNext()) {
                     List<Object> itemO = contentT.next().objects();
                     Query query = new Query();
@@ -250,14 +251,13 @@ public class MessageGen {
                         query.addTreeContent(m.getMessageType(),
                                 m.getContent());
                     }
-//                    LOG.info("q {}", query);
-                    queries.add(query);
+                    stepQueries.add(query);
                 }
 
                 boolean nextMerge = true;
                 Query merged = new Query();
                 List<Query> mergedQueries = new ArrayList<>();
-                for (Query q : queries) {
+                for (Query q : stepQueries) {
                     if (nextMerge) {
                         merged = new Query();
                         nextMerge = !merged.mergeIfPossible(q);
@@ -271,8 +271,9 @@ public class MessageGen {
                     }
                 }
                 mergedQueries.add(merged);
-                mergedQueries.forEach(x -> LOG.info("m {}", x));
 
+                queries.addAll(stepQueries);
+                queries.addAll(mergedQueries);
             }
 
             count += msgs.size();
@@ -295,12 +296,17 @@ public class MessageGen {
         this.modelGraph = modelGraph;
         this.random = random;
         this.config = config;
+        queries = new HashSet<>();
         this.queryDepth = Integer.parseInt(
                 config.getProperty(Constants.CONFIG_QUERY_DEPTH));
     }
 
     public Iterable<Collection<Message>> getIterable() {
         return new MessageIterable();
+    }
+
+    public Set<Query> getQueries() {
+        return queries;
     }
 
 

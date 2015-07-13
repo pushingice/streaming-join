@@ -42,12 +42,17 @@ public class Driver {
 
         for (Collection<Message> coll: messageGen.getIterable()) {
             LOG.info("-----");
-            SortedSet<Message> sorted = new TreeSet<>(new MessageComparator());
-            sorted.addAll(coll);
-            for (Message m : sorted) {
+//            SortedSet<Message> sorted = new TreeSet<>(new MessageComparator());
+//            sorted.addAll(coll);
+            for (Message m : coll) {
                 LOG.info(m.toString());
             }
+            for (Query q : messageGen.getQueries()) {
+                LOG.info(q.toString());
+            }
         }
+
+
 
     }
 }
