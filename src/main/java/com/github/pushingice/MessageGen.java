@@ -74,63 +74,88 @@ public class MessageGen {
 
         @Override
         public Collection<Message> next() {
+            // collects messages to send
             List<Message> msgs = new LinkedList<>();
+            // use Tinkerpop to build and query a message graph
             Graph contentGraph = TinkerGraph.open();
+            // traverse the model graph in a tree-like fashion (query)
             GraphTraversal traversal = modelGraph.traversal().V().out();
-
             Tree tree = (Tree) traversal.tree().next();
             List<List<String>> queryPaths = treeversal(tree);
-            queryPaths.forEach(q -> {
-                Iterator<String> fromIterator = q.iterator();
-                Iterator<String> toIterator = q.iterator();
+            // iterate over each query path (e.g. A->B->C, A->B->D, ...)
+            queryPaths.forEach(query -> {
+                // create two staggered iterators (e.g. A->B... and B->C...)
+                Iterator<String> fromIterator = query.iterator();
+                Iterator<String> toIterator = query.iterator();
                 toIterator.next();
                 while (toIterator.hasNext()) {
                     String fromType = fromIterator.next();
                     String toType = toIterator.next();
+                    // grab weights from the model graph
                     List<Integer> weights = new ArrayList<>();
                     modelGraph.traversal().V().hasLabel(fromType)
                             .out().hasLabel(toType).inE()
                             .forEachRemaining(x -> {
-                                weights.add(Integer.parseInt((String) x.property(Constants.FROM_WEIGHT).value()));
-                                weights.add(Integer.parseInt((String) x.property(Constants.TO_WEIGHT).value()));
+                                Object w1, w2;
+                                w1 = x.property(Constants.FROM_WEIGHT).value();
+                                w2 = x.property(Constants.TO_WEIGHT).value();
+                                weights.add(Integer.parseInt((String) w1));
+                                weights.add(Integer.parseInt((String) w2));
                             });
                     int fromWeight = weights.get(0);
                     int toWeight = weights.get(1);
-                    List<Message> fromMsgs = new LinkedList<>();
-                    List<Message> toMsgs = new LinkedList<>();
+                    // accumulate outgoing and incoming messages
+//                    List<Message> fromMsgs = new LinkedList<>();
+//                    List<Message> toMsgs = new LinkedList<>();
+                    SortedSet<Message> fromMsgs = new TreeSet<>(new MessageComparator());
+                    SortedSet<Message> toMsgs = new TreeSet<>(new MessageComparator());
+                    // reference to message vertex
                     Vertex fromV, toV;
-
+                    // loop over all messages with the 'from' type (e.g. 'A')
                     GraphTraversal fromTrav = contentGraph.traversal().V()
                             .hasLabel(fromType);
+                    // if there are no messages of that type
                     if (!fromTrav.hasNext()) {
+                        // add fromWeight # of messages to the graph
                         for (int i = 0; i < fromWeight; i++) {
-                            Message fromMsg = new Message(config, random, fromType);
+                            Message fromMsg = new Message(
+                                    config, random, fromType);
                             fromV = contentGraph.addVertex(T.label, fromType,
-                                    Constants.MSG_TYPE, fromMsg.getMessageType(),
+                                    Constants.MSG_TYPE,
+                                    fromMsg.getMessageType(),
                                     Constants.MSG_ID, fromMsg.getId(),
                                     Constants.MSG, fromMsg);
                             msgs.add(fromMsg);
                             fromMsgs.add(fromMsg);
                         }
                     } else {
+                        // otherwise iterate over existing nodes of that type
                         while (fromTrav.hasNext()) {
+                            // grab a reference to the existing vertex
                             fromV = (Vertex) fromTrav.next();
                             Message fromMsg = (Message) fromV
                                     .property(Constants.MSG).value();
                             fromMsgs.add(fromMsg);
                         }
                     }
-
+                    // loop over all messages with the 'to' type (e.g. 'B')
                     GraphTraversal toTrav = contentGraph.traversal().V()
                             .hasLabel(toType);
-
+                    // if there are no messages of that type
                     if (!toTrav.hasNext()) {
-                        for (int i = 0; i < toWeight; i++) {
+                        // create toWeight # of messages for each parent
+                        // message
+                        for (int i = 0; i < fromMsgs.size()*toWeight; i++) {
                             Message toMsg = new Message(config, random, toType);
+                            toV = contentGraph.addVertex(T.label, toType,
+                                    Constants.MSG_ID, toMsg.getId(),
+                                    Constants.MSG_TYPE, toMsg.getMessageType(),
+                                    Constants.MSG, toMsg);
                             msgs.add(toMsg);
                             toMsgs.add(toMsg);
                         }
                     } else {
+                        // otherwise grab a reference to existing vertex
                         while (toTrav.hasNext()) {
                             toV = (Vertex) toTrav.next();
                             Message toMsg = (Message) toV
@@ -139,53 +164,49 @@ public class MessageGen {
                         }
 
                     }
+
+                    long minFromId = fromMsgs.first().getId();
+                    // iterate over messages of 'from' type
                     for (Message fromMsg : fromMsgs) {
+                        // get the vertex with that message id from the graph
                         GraphTraversal fromT = contentGraph.traversal().V()
                                 .has(Constants.MSG_ID, fromMsg.getId());
-                        if (fromT.hasNext()) {
-                            fromV = (Vertex) fromT.next();
-                        } else {
-                            fromV = contentGraph.addVertex(T.label, fromType,
-                                    Constants.MSG_ID, fromMsg.getId(),
-                                    Constants.MSG_TYPE, fromMsg.getMessageType(),
-                                    Constants.MSG, fromMsg);
-                        }
-
+                        fromV = (Vertex) fromT.next();
+                        // iterate over messages of 'to' type
+                        long minToId = toMsgs.first().getId();
                         for (Message toMsg : toMsgs) {
+                            // get the vertex with that id from the graph
                             GraphTraversal toT = contentGraph.traversal().V()
                                     .has(Constants.MSG_ID, toMsg.getId());
-                            if (toT.hasNext()) {
-                                toV = (Vertex) toT.next();
-                            } else {
-                                toV = contentGraph.addVertex(T.label, toType,
-                                    Constants.MSG_ID, toMsg.getId(),
-                                    Constants.MSG_TYPE, toMsg.getMessageType(),
-                                    Constants.MSG, toMsg);
-                            }
-
+                            toV = (Vertex) toT.next();
+                            // find the edge connecting 'from' and 'to'
                             GraphTraversal edgeT = contentGraph.traversal().E()
                                     .has(Constants.MSG_ID, fromMsg.getId())
                                     .has(Constants.TO_MSG_ID, toMsg.getId());
-                            if (!edgeT.hasNext()) {
+                            // if it doesn't exist, add it
+                            // this math relies on sequential ids
+                            // it paritions the messages to their parents
+                            if (!edgeT.hasNext() &&
+                                    (toMsg.getId() - minToId)/toWeight ==
+                                            fromMsg.getId() - minFromId) {
                                 Message linkMsg = fromMsg.copy();
                                 linkMsg.setFkId(toMsg.getId());
-                                linkMsg.setFkMessageType(toMsg.getMessageType());
+                                linkMsg.setFkMessageType(
+                                        toMsg.getMessageType());
                                 linkMsg.setContent("");
                                 fromV.addEdge(Constants.FOREIGN_KEY, toV,
                                         Constants.MSG, linkMsg,
-                                        Constants.MSG_TYPE, fromMsg.getMessageType(),
-                                        Constants.TO_MSG_TYPE, toMsg.getMessageType(),
+                                        Constants.MSG_TYPE,
+                                        fromMsg.getMessageType(),
+                                        Constants.TO_MSG_TYPE,
+                                        toMsg.getMessageType(),
                                         Constants.MSG_ID, fromMsg.getId(),
                                         Constants.TO_MSG_ID, toMsg.getId());
-
                                 msgs.add(linkMsg);
                             }
-
-
                         }
                     }
                 }
-
             });
 
             for(List<String> path : queryPaths) {
@@ -223,11 +244,13 @@ public class MessageGen {
                     List<Object> itemO = contentT.next().objects();
                     Query query = new Query();
                     for (Object v : itemO) {
-                        Message m = (Message) ((Vertex) v).property(Constants.MSG).value();
+                        Message m = (Message)
+                                ((Vertex) v).property(Constants.MSG).value();
                         query.addQueryNode(m.getMessageType(), m.getId());
-                        query.addTreeContent(m.getMessageType(), m.getContent());
+                        query.addTreeContent(m.getMessageType(),
+                                m.getContent());
                     }
-                    LOG.info("q {}", query);
+//                    LOG.info("q {}", query);
                     queries.add(query);
                 }
 
