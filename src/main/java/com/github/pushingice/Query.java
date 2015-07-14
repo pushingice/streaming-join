@@ -17,6 +17,7 @@ public class Query {
     private Map<Long, String> leafContent = new HashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger(
             Driver.class.getCanonicalName());
+    private String queryString = "";
 
     public String getQueryRoute() {
         return String.join("/", queryNodes);
@@ -65,11 +66,25 @@ public class Query {
             }
 
         }
-        treeContent = other.treeContent;
+        treeContent.putAll(other.treeContent);
         long otherId = Long.parseLong(other.getQueryNodes().get(len - 1));
         leafContent.put(otherId, treeContent.get(leafType));
 
         return true;
+    }
+
+    public void preSerialize() {
+        queryString = getQueryRoute();
+        int len = queryNodes.size();
+        String leafNode = queryNodes.get(len-1);
+        try {
+            long leaf = Long.parseLong(leafNode);
+            leafType = queryNodes.get(len-2);
+            leafContent.put(leaf, treeContent.get(leafType));
+            treeContent.remove(leafType);
+        } catch (NumberFormatException e ) {
+            treeContent.remove(leafNode.substring(0, leafNode.length()-1));
+        }
     }
 
     @Override

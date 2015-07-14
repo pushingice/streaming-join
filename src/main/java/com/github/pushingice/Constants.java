@@ -18,4 +18,5 @@ public final class Constants {
     public static final String CONFIG_RANDOM_SEED = "randomSeed";
     public static final String CONFIG_MESSAGE_COUNT = "messageCount";
     public static final String CONFIG_QUERY_DEPTH = "queryDepth";
+    public static final String CONFIG_PRETTY_JSON = "prettyJson";
 }
