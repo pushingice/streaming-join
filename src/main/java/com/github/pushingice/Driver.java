@@ -2,6 +2,9 @@ package com.github.pushingice;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,20 +49,35 @@ public class Driver {
             gson = new GsonBuilder().disableHtmlEscaping().create();
         }
 
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                config.getProperty(Constants.CONFIG_KAFKA_HOST) + ":9092");
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                "org.apache.kafka.common.serialization.StringSerializer");
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                "org.apache.kafka.common.serialization.StringSerializer");
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+
         for (Collection<Message> coll: messageGen.getIterable()) {
             LOG.info("-----");
-//            SortedSet<Message> sorted = new TreeSet<>(new MessageComparator());
-//            sorted.addAll(coll);
             for (Message m : coll) {
                 LOG.info(new String(gson.toJson(m).getBytes("UTF-8")));
+                producer.send(new ProducerRecord<>(
+                        config.getProperty(Constants.CONFIG_MESSAGE_TOPIC),
+                        Long.toString(m.getId()),
+                        new String(gson.toJson(m).getBytes("UTF-8"))));
             }
             for (Query q : messageGen.getQueries()) {
                 q.preSerialize();
                 LOG.info(new String(gson.toJson(q).getBytes("UTF-8")));
+                producer.send(new ProducerRecord<>(config.getProperty(
+                        Constants.CONFIG_QUERY_TOPIC),
+                        q.getQueryRoute(),
+                        new String(gson.toJson(q).getBytes("UTF-8"))));
             }
         }
-
-
+        producer.close();
 
     }
 }
