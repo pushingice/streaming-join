@@ -60,7 +60,7 @@ symmetric it does not matter which node is designated as the root. The weights
 Do a `mvn install` to build the jar. To load messages into a running kafka
 server, edit `config.properties` to point to the kafka server. Then run with
 ```
-java -jar target/streaming-join-0.0.2-SNAPSHOT.jar config.properties
+java -jar target/sj-driver-0.0.2-SNAPSHOT.jar config.properties
 ```
 
 ## Other Properties
