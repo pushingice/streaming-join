@@ -46,7 +46,7 @@
     </dependencies>
 
     <build>
-        <finalName>streaming-join-${project.version}</finalName>
+
         <plugins>
 
             <!-- Set a compiler level -->
@@ -66,21 +66,39 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>2.3</version>
                 <executions>
-                    <!-- Run shade goal on package phase -->
+
                     <execution>
+                        <id>driver</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <finalName>sj-driver-${project.version}</finalName>
                             <transformers>
-                                <!-- add Main-Class to manifest file -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.github.pushingice.Driver</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
                     </execution>
+
+                    <execution>
+                        <id>sqlite</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>sj-sqlite-impl-${project.version}</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.github.pushingice.impls.sqlite.db.KafkaClient</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
 
