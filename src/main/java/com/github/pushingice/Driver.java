@@ -39,7 +39,8 @@ public class Driver {
 
         Graph graph = CSVToGraph.parse("src/main/resources/" +
                 config.getProperty(Constants.CONFIG_SCENARIO_FILE));
-        Random random = new Random();
+        Random random = new Random(Long.parseLong(
+                config.getProperty(Constants.CONFIG_RANDOM_SEED)));
         MessageGen messageGen = new MessageGen(graph, random, config);
         Gson gson;
         if (config.getProperty(Constants.CONFIG_PRETTY_JSON).equals("true")) {

@@ -11,7 +11,7 @@ public final class Constants {
     public static final String MSG = "msg";
     public static final String CREATE = "create";
     public static final String DELETE = "delete";
-    public static final String DELETE_PERCENT = "deletePercent";
+    public static final String CONFIG_DELETE_RATIO = "deleteRatio";
     public static final String FOREIGN_KEY = "foreignKey";
     public static final String CONFIG_SCENARIO_FILE = "scenarioFile";
     public static final String CONFIG_MESSAGE_BYTES = "messageBytes";
@@ -19,7 +19,7 @@ public final class Constants {
     public static final String CONFIG_MESSAGE_COUNT = "messageCount";
     public static final String CONFIG_QUERY_DEPTH = "queryDepth";
     public static final String CONFIG_PRETTY_JSON = "prettyJson";
-    public static final String CONFIG_KAFKA_HOST = "kafkHost";
+    public static final String CONFIG_KAFKA_HOST = "kafkaHost";
     public static final String CONFIG_MESSAGE_TOPIC = "messageTopic";
     public static final String CONFIG_QUERY_TOPIC = "queryTopic";
 }

@@ -55,4 +55,33 @@ symmetric it does not matter which node is designated as the root. The weights
  are expressed as a ratio of data set sizes. For example `A,B,1,2` means for
  every `A` there are exactly two `B`'s.
 
+## Usage
+
+Do a `mvn install` to build the jar. To load messages into a running kafka
+server, edit `config.properties` to point to the kafka server. Then run with
+```
+java -jar target/streaming-join-0.0.2-SNAPSHOT.jar config.properties
+```
+
+## Other Properties
+
+- `messageBytes` The max size of the message payload. For each message this is
+random from 0 to the max size. The content is a random string of bytes that is
+base 64 encoded.
+- `messageCount` Stop sending messages after this has been reached. The actual
+number of messages sent depends on the scenario file.
+- `randomSeed` Set the random number generator seed. This is used for repeatable
+results. Can be set to any long.
+- `deleteRatio` Double between 0 and 1 representing the proportion of messages
+that will have a subsequent delete message sent. This feature is not implemented
+yet.
+- `queryDepth` This is the maximum depth of the rest tree to generate query
+results for. In the example above, setting this to 3 would produce those
+queries. Setting it to 2 or lower would create a restricted set.
+- `prettyJson` Send and log pretty printed Json. Useful for debugging.
+- `messageTopic` Topic to send content messages to.
+- `queryTopic` Topic to send query responses to.
+
+
+
 
