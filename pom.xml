@@ -47,6 +47,11 @@
             <artifactId>kafka_2.10</artifactId>
             <version>0.8.2.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.8.10.1</version>
+        </dependency>
 
     </dependencies>
 
