@@ -32,11 +32,12 @@ public class KafkaClient {
             "PRIMARY KEY (%1$s_id, %2$s_id))";
 
     private static final String CREATE_TABLE_BASE = "CREATE TABLE %s (" +
-            "id INTEGER PRIMARY KEY)";
+            "id INTEGER PRIMARY KEY," +
+            "content TEXT)";
 
 
     private static final Logger LOG = LoggerFactory.getLogger(
-            KafkaClient.class.getCanonicalName());
+            KafkaClient.class.getSimpleName());
 
     public static void main(String[] args) {
 
@@ -81,7 +82,6 @@ public class KafkaClient {
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "a", "c"));
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "b", "d"));
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "b", "e"));
-
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "f"));
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "g"));
 
@@ -108,8 +108,9 @@ public class KafkaClient {
                 try {
                     if (msg.getFkMessageType().isEmpty()) {
                         statement.executeUpdate(String.format(
-                                "INSERT INTO %s VALUES (%d)",
-                                msg.getMessageType(), msg.getId()
+                                "INSERT INTO %s VALUES (%d, '%s')",
+                                msg.getMessageType(), msg.getId(),
+                                msg.getContent()
                         ));
                     } else {
                         statement.executeUpdate(String.format(
