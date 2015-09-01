@@ -24,6 +24,17 @@ import java.util.Properties;
 
 public class KafkaClient {
 
+    private static final String DROP_TABLE = "DROP TABLE IF EXISTS %s";
+
+    private static final String CREATE_TABLE_LINK = "CREATE TABLE %1$s_%2$s (" +
+            "%1$s_id INTEGER REFERENCES %1$s(id), " +
+            "%2$s_id INTEGER REFERENCES %2$s(id)," +
+            "PRIMARY KEY (%1$s_id, %2$s_id))";
+
+    private static final String CREATE_TABLE_BASE = "CREATE TABLE %s (" +
+            "id INTEGER PRIMARY KEY)";
+
+
     private static final Logger LOG = LoggerFactory.getLogger(
             KafkaClient.class.getCanonicalName());
 
@@ -43,71 +54,78 @@ public class KafkaClient {
         }
 
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-        final String columns = "(id integer primary key, " +
-                "fk_id integer, fk_type string)";
         try (Connection connection = DriverManager
                 .getConnection("jdbc:sqlite:message.db")) {
             Statement statement = connection.createStatement();
-            statement.executeUpdate("drop table if exists a");
-            statement.executeUpdate("drop table if exists b");
-            statement.executeUpdate("drop table if exists c");
-            statement.executeUpdate("drop table if exists d");
-            statement.executeUpdate("drop table if exists e");
-            statement.executeUpdate("drop table if exists f");
-            statement.executeUpdate("drop table if exists g");
-            statement.executeUpdate("create table a " + columns);
-            statement.executeUpdate("create table b " + columns);
-            statement.executeUpdate("create table c " + columns);
-            statement.executeUpdate("create table d " + columns);
-            statement.executeUpdate("create table e " + columns);
-            statement.executeUpdate("create table f " + columns);
-            statement.executeUpdate("create table g " + columns);
+            statement.executeUpdate(String.format(DROP_TABLE, "a"));
+            statement.executeUpdate(String.format(DROP_TABLE, "b"));
+            statement.executeUpdate(String.format(DROP_TABLE, "c"));
+            statement.executeUpdate(String.format(DROP_TABLE, "d"));
+            statement.executeUpdate(String.format(DROP_TABLE, "e"));
+            statement.executeUpdate(String.format(DROP_TABLE, "f"));
+            statement.executeUpdate(String.format(DROP_TABLE, "g"));
+            statement.executeUpdate(String.format(DROP_TABLE, "a_b"));
+            statement.executeUpdate(String.format(DROP_TABLE, "a_c"));
+            statement.executeUpdate(String.format(DROP_TABLE, "b_d"));
+            statement.executeUpdate(String.format(DROP_TABLE, "b_e"));
+            statement.executeUpdate(String.format(DROP_TABLE, "d_f"));
+            statement.executeUpdate(String.format(DROP_TABLE, "d_g"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "a"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "b"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "c"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "d"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "e"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "f"));
+            statement.executeUpdate(String.format(CREATE_TABLE_BASE, "g"));
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "a", "b"));
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "a", "c"));
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "b", "d"));
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "b", "e"));
+
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "f"));
+            statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "g"));
+
 
             Properties kafkaConfig = new Properties();
-            kafkaConfig.setProperty("group.id", "sqlite");
+            kafkaConfig.setProperty("group.id", "sqlite" +
+                    Long.toString(System.currentTimeMillis()));
             kafkaConfig.setProperty("zookeeper.connect", "localhost:2181");
+            kafkaConfig.setProperty("auto.offset.reset", "smallest");
             Map<String, Integer> topicCountMap = new HashMap<>();
             ConsumerConnector consumer = kafka.consumer.Consumer
                     .createJavaConsumerConnector(
                             new ConsumerConfig(kafkaConfig));
-            topicCountMap.put("message", 1);
+            topicCountMap.put("message-2", 1);
             Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap =
                     consumer.createMessageStreams(topicCountMap);
             List<KafkaStream<byte[], byte[]>> streams =
-                    consumerMap.get("message");
+                    consumerMap.get("message-2");
             KafkaStream<byte[], byte[]> messages = streams.get(0);
             messages.forEach(x -> {
                 String msgContent = new String(x.message());
                 Message msg = gson.fromJson(msgContent, Message.class);
                 LOG.info("{}", msg);
                 try {
-                    statement.executeUpdate(String.format(
-                            "INSERT INTO %s VALUES (%d, %d, '%s')",
-                            msg.getMessageType(), msg.getId(), msg.getFkId(),
-                            msg.getFkMessageType()));
+                    if (msg.getFkMessageType().isEmpty()) {
+                        statement.executeUpdate(String.format(
+                                "INSERT INTO %s VALUES (%d)",
+                                msg.getMessageType(), msg.getId()
+                        ));
+                    } else {
+                        statement.executeUpdate(String.format(
+                                "INSERT INTO %s_%s VALUES (%d, %d)",
+                                msg.getMessageType(), msg.getFkMessageType(),
+                                msg.getId(), msg.getFkId()
+                        ));
+                    }
                 } catch (SQLException e) {
                     LOG.error("{}", e.getMessage());
-                    if (e.getMessage().startsWith("UNIQUE constraint")) {
-                        try {
-                            statement.executeUpdate(
-                                    String.format("UPDATE %s SET " +
-                                                    "fk_id = %d, fk_type='%s' " +
-                                                    "WHERE id = %d ",
-                                            msg.getMessageType(),
-                                            msg.getFkId(),
-                                            msg.getFkMessageType(),
-                                            msg.getId())
-                                    );
-                        } catch (SQLException e1) {
-                            LOG.error("{}", e1.getMessage());
-                        }
-                    }
-
                 }
             });
 
         } catch (SQLException e) {
             LOG.error("{}", e.getMessage());
+            LOG.error("{}", e.getStackTrace());
         }
 
     }
