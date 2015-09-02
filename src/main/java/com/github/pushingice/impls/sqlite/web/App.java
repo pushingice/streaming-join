@@ -6,8 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import static spark.Spark.get;
 
@@ -23,13 +23,13 @@ public class App {
         get("/hello", (req, res) -> "Hello World");
 
         get("/", (req, res) -> {
-            res.type("text/json");
+            res.type("application/json");
             return "{\"hello\": \"world\"}";
         });
 
-        get("/As", (req, res) -> {
+        get("/As", "application/json", (req, res) -> {
             Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            List<Message> results = new ArrayList<>();
+            Set<Message> results = new HashSet<>();
             try (Connection connection = DriverManager
                     .getConnection("jdbc:sqlite:message.db")) {
                 Statement statement = connection.createStatement();
@@ -43,11 +43,31 @@ public class App {
             } catch (SQLException e) {
                 LOG.info("{}", e);
             }
-            return gson.toJson(results, List.class);
+            return gson.toJson(results, Set.class);
         });
 
-
-
+        get("/A/:a_id/Bs", (req, res) -> {
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            Set<Message> results = new HashSet<>();
+            try (Connection connection = DriverManager
+                    .getConnection("jdbc:sqlite:message.db")) {
+                Statement statement = connection.createStatement();
+                String stmt = String.format("SELECT a.id, a.content FROM a " +
+                        "JOIN a_b JOIN b " +
+                        "WHERE a.id == %s AND " +
+                        "b.id == a_b.b_id;", req.params(":a_id"));
+                LOG.info("{}", stmt);
+                ResultSet rs = statement.executeQuery(stmt);
+                while (rs.next()) {
+                    LOG.info("{}", rs.getInt(1));
+                    Message msg = new Message("a", rs.getLong(1), "", 0L, rs.getString(2));
+                    results.add(msg);
+                }
+            } catch (SQLException e) {
+                LOG.info("{}", e);
+            }
+            return gson.toJson(results, Set.class);
+        });
 
     }
 }
