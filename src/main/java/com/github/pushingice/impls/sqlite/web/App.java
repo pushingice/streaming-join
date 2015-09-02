@@ -46,28 +46,32 @@ public class App {
             return gson.toJson(results, Set.class);
         });
 
-        get("/A/:a_id/Bs", (req, res) -> {
+        get("/A/:a_id/Bs", (request, response) -> {
             Gson gson = new GsonBuilder().disableHtmlEscaping().create();
             Set<Message> results = new HashSet<>();
             try (Connection connection = DriverManager
                     .getConnection("jdbc:sqlite:message.db")) {
                 Statement statement = connection.createStatement();
-                String stmt = String.format("SELECT a.id, a.content FROM a " +
+                String stmt = String.format("SELECT a.id, a.content, b.id, b.content FROM a " +
                         "JOIN a_b JOIN b " +
                         "WHERE a.id == %s AND " +
-                        "b.id == a_b.b_id;", req.params(":a_id"));
+                        "b.id == a_b.b_id;", request.params(":a_id"));
                 LOG.info("{}", stmt);
                 ResultSet rs = statement.executeQuery(stmt);
                 while (rs.next()) {
                     LOG.info("{}", rs.getInt(1));
-                    Message msg = new Message("a", rs.getLong(1), "", 0L, rs.getString(2));
-                    results.add(msg);
+                    Message msgA = new Message("a", rs.getLong(1), "", 0L, rs.getString(2));
+                    results.add(msgA);
+                    Message msgB = new Message("b", rs.getLong(3), "", 0L, rs.getString(4));
+                    results.add(msgB);
                 }
             } catch (SQLException e) {
                 LOG.info("{}", e);
             }
             return gson.toJson(results, Set.class);
         });
+
+
 
     }
 }
