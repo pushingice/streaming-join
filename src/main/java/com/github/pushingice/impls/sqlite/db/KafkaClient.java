@@ -95,11 +95,11 @@ public class KafkaClient {
             ConsumerConnector consumer = kafka.consumer.Consumer
                     .createJavaConsumerConnector(
                             new ConsumerConfig(kafkaConfig));
-            topicCountMap.put("message-2", 1);
+            topicCountMap.put("message", 1);
             Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap =
                     consumer.createMessageStreams(topicCountMap);
             List<KafkaStream<byte[], byte[]>> streams =
-                    consumerMap.get("message-2");
+                    consumerMap.get("message");
             KafkaStream<byte[], byte[]> messages = streams.get(0);
             messages.forEach(x -> {
                 String msgContent = new String(x.message());
