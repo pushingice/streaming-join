@@ -3,11 +3,10 @@ package com.github.pushingice.impls.sqlite.db;
 import com.github.pushingice.Message;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.KafkaConsumerStreams;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,12 +16,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
-public class KafkaClient {
+public class KafkaDBLoader {
 
     private static final String DROP_TABLE = "DROP TABLE IF EXISTS %s";
 
@@ -37,7 +33,7 @@ public class KafkaClient {
 
 
     private static final Logger LOG = LoggerFactory.getLogger(
-            KafkaClient.class.getSimpleName());
+            KafkaDBLoader.class.getSimpleName());
 
     public static void main(String[] args) {
 
@@ -85,22 +81,11 @@ public class KafkaClient {
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "f"));
             statement.executeUpdate(String.format(CREATE_TABLE_LINK, "d", "g"));
 
+            KafkaStream<byte[], byte[]> messages =
+                    KafkaConsumerStreams.getStreams("sqlite" +
+                            Long.toString(System.currentTimeMillis()),
+                            "localhost:2181", true, "message", 1).get(0);
 
-            Properties kafkaConfig = new Properties();
-            kafkaConfig.setProperty("group.id", "sqlite" +
-                    Long.toString(System.currentTimeMillis()));
-            kafkaConfig.setProperty("zookeeper.connect", "localhost:2181");
-            kafkaConfig.setProperty("auto.offset.reset", "smallest");
-            Map<String, Integer> topicCountMap = new HashMap<>();
-            ConsumerConnector consumer = kafka.consumer.Consumer
-                    .createJavaConsumerConnector(
-                            new ConsumerConfig(kafkaConfig));
-            topicCountMap.put("message", 1);
-            Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap =
-                    consumer.createMessageStreams(topicCountMap);
-            List<KafkaStream<byte[], byte[]>> streams =
-                    consumerMap.get("message");
-            KafkaStream<byte[], byte[]> messages = streams.get(0);
             messages.forEach(x -> {
                 String msgContent = new String(x.message());
                 Message msg = gson.fromJson(msgContent, Message.class);
