@@ -6,8 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import static spark.Spark.get;
 
@@ -16,59 +15,68 @@ public class App {
     private static final Logger LOG = LoggerFactory.getLogger(
             App.class.getSimpleName());
 
+    private static String getJSONResults(
+            String query, String... tables) {
+
+        Set<Message> results = new HashSet<>();
+        try (Connection connection = DriverManager
+                .getConnection("jdbc:sqlite:message.db")) {
+            Statement statement = connection.createStatement();
+            ResultSet rs = statement.executeQuery(query);
+            while (rs.next()) {
+                int c = 1;
+                for (String table : tables) {
+                    results.add(new Message(
+                            table, rs.getLong(c), "", 0L, rs.getString(c+1)));
+                    c += 2;
+                }
+            }
+
+        } catch (SQLException e) {
+            LOG.info("{}", e);
+        }
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+        return gson.toJson(results, Set.class);
+
+    }
+
     public static void main(String[] args) {
 
-
-
-        get("/hello", (req, res) -> "Hello World");
-
-        get("/", (req, res) -> {
-            res.type("application/json");
-            return "{\"hello\": \"world\"}";
-        });
+        get("/", (req, res) -> "{\"hello\": \"world\"}");
 
         get("/As", "application/json", (req, res) -> {
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            Set<Message> results = new HashSet<>();
-            try (Connection connection = DriverManager
-                    .getConnection("jdbc:sqlite:message.db")) {
-                Statement statement = connection.createStatement();
-                ResultSet rs = statement.executeQuery("SELECT * FROM a;");
-                while (rs.next()) {
-                    LOG.info("{}", rs.getInt("id"));
-                    Message msg = new Message("a", rs.getLong("id"), "", 0L, rs.getString("content"));
-                    results.add(msg);
-                }
 
-            } catch (SQLException e) {
-                LOG.info("{}", e);
-            }
-            return gson.toJson(results, Set.class);
+            return getJSONResults("SELECT * FROM a;", "a");
+
         });
 
         get("/A/:a_id/Bs", (request, response) -> {
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            Set<Message> results = new HashSet<>();
-            try (Connection connection = DriverManager
-                    .getConnection("jdbc:sqlite:message.db")) {
-                Statement statement = connection.createStatement();
-                String stmt = String.format("SELECT a.id, a.content, b.id, b.content FROM a " +
-                        "JOIN a_b JOIN b " +
-                        "WHERE a.id == %s AND " +
-                        "b.id == a_b.b_id;", request.params(":a_id"));
-                LOG.info("{}", stmt);
-                ResultSet rs = statement.executeQuery(stmt);
-                while (rs.next()) {
-                    LOG.info("{}", rs.getInt(1));
-                    Message msgA = new Message("a", rs.getLong(1), "", 0L, rs.getString(2));
-                    results.add(msgA);
-                    Message msgB = new Message("b", rs.getLong(3), "", 0L, rs.getString(4));
-                    results.add(msgB);
-                }
-            } catch (SQLException e) {
-                LOG.info("{}", e);
-            }
-            return gson.toJson(results, Set.class);
+
+            String query = String.format("SELECT a.id, a.content, " +
+                    "b.id, b.content FROM a " +
+                    "JOIN a_b JOIN b " +
+                    "WHERE a.id == %s AND " +
+                    "b.id == a_b.b_id;", request.params(":a_id"));
+
+            return getJSONResults(query, "a", "b");
+
+        });
+
+        get("/A/:a_id/B/:b_id/Ds", (request, response) -> {
+
+            String query = String.format("SELECT a.id, a.content, " +
+                            "b.id, b.content, " +
+                            "d.id, d.content " +
+                            "FROM a JOIN a_b " +
+                            "JOIN b JOIN b_d " +
+                            "JOIN d " +
+                            "WHERE a.id == %s AND " +
+                            "b.id == a_b.b_id AND " +
+                            "b.id == %s AND " +
+                            "d.id == b_d.d_id;",
+                    request.params(":a_id"), request.params(":b_id"));
+
+            return getJSONResults(query, "a", "b", "d");
         });
 
 
